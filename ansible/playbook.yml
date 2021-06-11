@@ -1,0 +1,39 @@
+- name: "Deploying two containers: web-server and web-client on python"
+  hosts: 127.0.0.1
+  connection: local
+  # or hosts: all, then use ansible-playbook --connection=local --inventory=127.0.0.1, playbook.yml
+  vars:
+    containers:
+      - web-server
+      - web-client
+    docker_image: python:3-slim
+    network: webpp
+    port: 8080
+
+  tasks:
+  - name: "Pull Docker Image"
+    docker_image:
+      name: "{{ docker_image }}"
+      source: pull
+
+  - name: Create a network
+    docker_network:
+      name: "{{ network }}"
+    
+  - name: "Create containers"
+    docker_container:
+      name: "{{ item }}"
+      image: "{{ docker_image }}"
+      state: started
+      detach: yes
+      networks:
+        - name: "{{ network }}"
+          aliases: 
+            - "{{ item }}"
+      exposed_ports:
+        - "{{ port }}"
+      volumes:
+        - "{{ lookup('env', 'PWD') }}/python:/usr/src/myapp"
+      working_dir: /usr/src/myapp
+      command: python "{{ item }}".py
+    loop: "{{ containers }}"
